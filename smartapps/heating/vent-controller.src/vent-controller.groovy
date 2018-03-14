@@ -15,10 +15,10 @@
  *  Author: Jeff Ernst
  */
 definition(
-    name: "Virtual Thermostat",
+    name: "Vent Controller",
     namespace: "Heating",
     author: "Jeff Ernst",
-    description: "Control a space heater in conjunction with any temperature sensor.",
+    description: "Control a vent in conjunction with any temperature sensor.",
     category: "Green Living",
     iconUrl: "https://s3.amazonaws.com/smartapp-icons/Meta/temp_thermo-switch.png",
     iconX2Url: "https://s3.amazonaws.com/smartapp-icons/Meta/temp_thermo-switch@2x.png"
@@ -29,9 +29,9 @@ preferences {
     {
 		input "sensor", "capability.temperatureMeasurement", title: "Sensor"
 	}
-	section("Select the heater or air conditioner outlet(s)... ")
+	section("Select the heater or air conditioner vent... ")
     {
-		input "outlets", "capability.switch", title: "Outlets", multiple: true
+        input "ventSwitch", "capability.switch", title: "Heater Vent switch in room", required: false, description: "Optional"
 	}
 	section("Set the desired temperature...")
     {
@@ -78,16 +78,16 @@ def initialize()
 
 def startTimeHandler(evt)
 {
-    def smartAppLabel = app.getLabel()
 	def currentState = sensor.currentState("temperature")
     evaluate(currentState.doubleValue, evt)
-        
+    
+    def smartAppLabel = app.getLabel()
 	sendMessage(evt, "Start time reached for SmartApp $smartAppLabel")
 }
 
 def endTimeHandler(evt)
 {
-    outlets.off()
+    ventSwitch.setLevel(100)
     
     def smartAppLabel = app.getLabel()
     sendMessage(evt, "End time reached for SmartApp $smartAppLabel")
@@ -111,7 +111,7 @@ def temperatureHandler(evt)
 
 private evaluate(currentTemp, evt)
 {
-	def smartAppLabel = app.getLabel()
+    def smartAppLabel = app.getLabel()
     if(!(location.mode in modes))
     {
     	log.debug "The current mode $location.mode is not in selected modes for SmartApp $smartAppLabel, exiting..."
@@ -123,48 +123,45 @@ private evaluate(currentTemp, evt)
     def df = new java.text.SimpleDateFormat("EEE, MMM d yyyy HH:mm:ss")
     df.setTimeZone(location.timeZone)
         
-    def currSwitches = outlets.currentSwitch
-    def offSwitches = currSwitches.findAll
-    { switchVal ->
-        switchVal == "off" ? true : false
-    }
-    def onSwitches = currSwitches.findAll
-    { switchVal ->
-        switchVal == "on" ? true : false
-    }
+	int currentLevel = ventSwitch.currentValue("level") 
+    def switchStatus = ventSwitch.currentSwitch
+    log.debug "Switch status: $switchStatus   Level: $currentLevel"
     
     if (between)
     {
         log.debug "EVALUATE($currentTemp, $setpoint)"
         if (currentTemp < setpoint)
         {
-            if(offSwitches.size() > 0)
+            if(currentLevel < 100 || switchStatus == "off")
             {
             	def currentTime = df.format(new Date())
-    			def msg = "SmartApp $smartAppLabel turned on heater(s) on $currentTime with currentTemp of $currentTemp C"
+    			def msg = "SmartApp $smartAppLabel opened vent on $currentTime with currentTemp of $currentTemp C"
                 sendMessage(evt, msg)
-                outlets.on()
+                ventSwitch.setLevel(100)
+                ventSwitch.on()
             }
         }
         else
         {
-            if(onSwitches.size() > 0)
+            if(currentLevel > 0 || switchStatus == "on")
             {
                 def currentTime = df.format(new Date())
-                def msg = "SmartApp $smartAppLabel turned off heater(s) on $currentTime with currentTemp of $currentTemp C"
+                def msg = "SmartApp $smartAppLabel closed vent on $currentTime with currentTemp of $currentTemp C"
                 sendMessage(evt, msg)
-                outlets.off()
+                ventSwitch.setLevel(0)
+                ventSwitch.off()
             }
         }
     }
     else
     {
-        if(onSwitches.size() > 0)
+        if(currentLevel < 100 || switchStatus == "off")
         {
             def currentTime = df.format(new Date())
-            def msg = "SmartApp $smartAppLabel turned off heater(s) on $currentTime since it is outside of the valid time"
+            def msg = "SmartApp $smartAppLabel opened vent on $currentTime since it is outside of the valid time"
             sendMessage(evt, msg)
-            outlets.off()
+            ventSwitch.setLevel(100)
+            ventSwitch.on()
         }
     }
     
