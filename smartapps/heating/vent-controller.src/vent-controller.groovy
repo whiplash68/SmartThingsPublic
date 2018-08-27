@@ -33,9 +33,13 @@ preferences {
     {
         input "ventSwitch", "capability.switch", title: "Heater Vent switch in room", required: false, description: "Optional"
 	}
-	section("Set the desired temperature...")
+	section("Set the desired heat temperature...")
     {
-		input "setpoint", "decimal", title: "Set Temp", required: true
+		input "heatSetpoint", "decimal", title: "Set Temp", required: true
+	}
+    section("Set the desired cool temperature...")
+    {
+		input "coolSetpoint", "decimal", title: "Set Temp", required: true
 	}
     section("Turn on between what times?")
     {
@@ -71,7 +75,9 @@ def updated()
 
 def initialize()
 {
+	state.thermostatMode = "Heat"
 	subscribe(sensor, "temperature", temperatureHandler)
+    subscribe(ventSwitch, "temperature", ventTemperatureHandler)
     schedule(fromTime, startTimeHandler)
     schedule(toTime, endTimeHandler)
 }
@@ -91,6 +97,27 @@ def endTimeHandler(evt)
     
     def smartAppLabel = app.getLabel()
     sendMessage(evt, "End time reached for SmartApp $smartAppLabel")
+}
+
+def ventTemperatureHandler(evt)
+{
+	def ventTemperature = evt.doubleValue
+	log.debug "The temperature at the vent is ${ventTemperature}"
+    log.debug "Current thermostat mode is ${state.thermostatMode}"
+    
+    if(ventTemperature > 30.0 && state.thermostatMode != "Heat")
+    {
+    	state.thermostatMode = "Heat"
+        log.debug "Setting thermostat mode to Heat"
+    }
+    else if(ventTemperature < 15.0 && state.thermostatMode != "Cool")
+    { 
+    	state.thermostatMode = "Cool"
+        log.debug "Setting thermostat mode to Cool"
+    }
+    
+    def currentState = sensor.currentState("temperature")
+    evaluate(currentState.doubleValue, evt)
 }
 
 def temperatureHandler(evt)
@@ -128,28 +155,57 @@ private evaluate(currentTemp, evt)
     log.debug "Switch status: $switchStatus   Level: $currentLevel"
     
     if (between)
-    {
-        log.debug "EVALUATE($currentTemp, $setpoint)"
-        if (currentTemp < setpoint)
+    {        
+        if(state.thermostatMode == "Heat")
         {
-            if(currentLevel < 100 || switchStatus == "off")
+        	log.debug "Heat EVALUATE($currentTemp, $heatSetpoint)"
+            if (currentTemp < heatSetpoint)
             {
-            	def currentTime = df.format(new Date())
-    			def msg = "SmartApp $smartAppLabel opened vent on $currentTime with currentTemp of $currentTemp C"
-                sendMessage(evt, msg)
-                ventSwitch.setLevel(100)
-                ventSwitch.on()
+                if(currentLevel < 100 || switchStatus == "off")
+                {
+                    def currentTime = df.format(new Date())
+                    def msg = "SmartApp $smartAppLabel opened vent on $currentTime with currentTemp of $currentTemp C"
+                    sendMessage(evt, msg)
+                    ventSwitch.setLevel(100)
+                    ventSwitch.on()
+                }
+            }
+            else
+            {
+                if(currentLevel > 0 || switchStatus == "on")
+                {
+                    def currentTime = df.format(new Date())
+                    def msg = "SmartApp $smartAppLabel closed vent on $currentTime with currentTemp of $currentTemp C"
+                    sendMessage(evt, msg)
+                    ventSwitch.setLevel(0)
+                    ventSwitch.off()
+                }
             }
         }
         else
         {
-            if(currentLevel > 0 || switchStatus == "on")
+            log.debug "Cool EVALUATE($currentTemp, $coolSetpoint)"
+            if (currentTemp >= coolSetpoint)
             {
-                def currentTime = df.format(new Date())
-                def msg = "SmartApp $smartAppLabel closed vent on $currentTime with currentTemp of $currentTemp C"
-                sendMessage(evt, msg)
-                ventSwitch.setLevel(0)
-                ventSwitch.off()
+                if(currentLevel < 100 || switchStatus == "off")
+                {
+                    def currentTime = df.format(new Date())
+                    def msg = "SmartApp $smartAppLabel opened vent on $currentTime with currentTemp of $currentTemp C"
+                    sendMessage(evt, msg)
+                    ventSwitch.setLevel(100)
+                    ventSwitch.on()
+                }
+            }
+            else
+            {
+                if(currentLevel > 0 || switchStatus == "on")
+                {
+                    def currentTime = df.format(new Date())
+                    def msg = "SmartApp $smartAppLabel closed vent on $currentTime with currentTemp of $currentTemp C"
+                    sendMessage(evt, msg)
+                    ventSwitch.setLevel(0)
+                    ventSwitch.off()
+                }
             }
         }
     }
