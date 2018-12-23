@@ -42,6 +42,10 @@ preferences {
         input "fromTime", "time", title: "From", required: true
         input "toTime", "time", title: "To", required: true
     }
+    section("Only if this override switch is off")
+    {
+    	input "disableSwitch", "capability.switch", title: "Choose the disable switch", multiple: false, required: false
+    }
     section("Only when mode is...")
     {
     	input "modes", "mode", title: "Modes", multiple: true, required: true
@@ -118,6 +122,24 @@ private evaluate(currentTemp, evt)
         //sendMessage(evt, "The current mode $location.mode is not in selected modes for SmartApp $smartAppLabel, exiting...")
         return
     }
+    
+    if(disableSwitch)
+    {
+    	def overrideSwitchValue = disableSwitch.currentSwitch
+        if(overrideSwitchValue == "on")
+        {
+        	log.debug "The disable switch is $overrideSwitchValue for SmartApp $smartAppLabel, exiting..."
+        	return
+        }
+        else
+        {
+        	log.debug "The disable switch is $overrideSwitchValue for SmartApp $smartAppLabel, continuing to process..."
+        }        
+    }
+    else
+    {
+    	log.debug "No override switch has been specified"
+    }    
 
 	def between = timeOfDayIsBetween(fromTime, toTime, new Date(), location.timeZone)
     def df = new java.text.SimpleDateFormat("EEE, MMM d yyyy HH:mm:ss")
