@@ -81,6 +81,7 @@ def doBatteryCheck() {
     def nDevBelow  = 0
     def strMessage = ""
 
+	log.trace "Min Threshold Value: ${settings.minThreshold.toInteger()} "
 	for (batteryDevice in thebattery) 
     {
     	def batteryLevel = batteryDevice.currentValue("battery")
@@ -111,7 +112,11 @@ private send(msg) {
         sendNotificationToContacts(msg, recipients)  //Sends the specified message to the specified contacts and the Notifications feed.
     } 
     else 
+    {
+    	log.trace "Sending push notification"
     	sendNotificationEvent(msg)
+        sendPush(msg)
+     }
         
     if (phone)
     {
