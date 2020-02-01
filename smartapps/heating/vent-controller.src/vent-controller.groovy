@@ -164,7 +164,7 @@ private evaluate(currentTemp, evt)
                 if(currentLevel < 100 || switchStatus == "off")
                 {
                     def currentTime = df.format(new Date())
-                    def msg = "SmartApp $smartAppLabel opened vent on $currentTime with currentTemp of $currentTemp C"
+                    def msg = "SmartApp $smartAppLabel opened vent on $currentTime with currentTemp of $currentTemp C (Heat Mode)"
                     sendMessage(evt, msg)
                     ventSwitch.setLevel(100)
                     ventSwitch.on()
@@ -175,7 +175,7 @@ private evaluate(currentTemp, evt)
                 if(currentLevel > 0 || switchStatus == "on")
                 {
                     def currentTime = df.format(new Date())
-                    def msg = "SmartApp $smartAppLabel closed vent on $currentTime with currentTemp of $currentTemp C"
+                    def msg = "SmartApp $smartAppLabel closed vent on $currentTime with currentTemp of $currentTemp C (Heat Mode)"
                     sendMessage(evt, msg)
                     ventSwitch.setLevel(0)
                     ventSwitch.off()
@@ -190,7 +190,7 @@ private evaluate(currentTemp, evt)
                 if(currentLevel < 100 || switchStatus == "off")
                 {
                     def currentTime = df.format(new Date())
-                    def msg = "SmartApp $smartAppLabel opened vent on $currentTime with currentTemp of $currentTemp C"
+                    def msg = "SmartApp $smartAppLabel opened vent on $currentTime with currentTemp of $currentTemp C (Cool Mode)"
                     sendMessage(evt, msg)
                     ventSwitch.setLevel(100)
                     ventSwitch.on()
@@ -201,7 +201,7 @@ private evaluate(currentTemp, evt)
                 if(currentLevel > 0 || switchStatus == "on")
                 {
                     def currentTime = df.format(new Date())
-                    def msg = "SmartApp $smartAppLabel closed vent on $currentTime with currentTemp of $currentTemp C"
+                    def msg = "SmartApp $smartAppLabel closed vent on $currentTime with currentTemp of $currentTemp C (Cool Mode)"
                     sendMessage(evt, msg)
                     ventSwitch.setLevel(0)
                     ventSwitch.off()
